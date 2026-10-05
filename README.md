@@ -17,3 +17,7 @@ A passionate developer from Indonesia 🇮🇩
 - **Languages:** JavaScript, Python, PHP, SQL
 - **Frameworks:** React, Laravel, Node.js
 - **Tools:** Git, Docker, Figma, VS Code
+
+## 🐍 My Contributions Snake
+
+![Snake animation](https://github.com/Git-Zero01/Git-Zero01/raw/output/github-contribution-grid-snake.svg)
