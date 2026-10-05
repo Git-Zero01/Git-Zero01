@@ -1,16 +1,19 @@
-## Hi there 👋
+# Hi there 👋, I'm Sigit Aditya Saputra
 
-<!--
-**Git-Zero01/Git-Zero01** is a ✨ _special_ ✨ repository because its `README.md` (this file) appears on your GitHub profile.
+A passionate developer from Indonesia 🇮🇩
 
-Here are some ideas to get you started:
+---
 
+## 🚀 About Me
 - 🔭 I’m currently working on ...
 - 🌱 I’m currently learning ...
 - 👯 I’m looking to collaborate on ...
-- 🤔 I’m looking for help with ...
 - 💬 Ask me about ...
-- 📫 How to reach me: ...
-- 😄 Pronouns: ...
-- ⚡ Fun fact: ...
--->
+- 📫 How to reach me: email@domain.com
+
+---
+
+## 🛠 Tech Stack & Tools
+- **Languages:** JavaScript, Python, PHP, SQL
+- **Frameworks:** React, Laravel, Node.js
+- **Tools:** Git, Docker, Figma, VS Code
