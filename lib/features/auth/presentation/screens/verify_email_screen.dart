@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/router/app_router.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../domain/auth_failure.dart';
 import '../providers/auth_controllers.dart';
 import '../providers/auth_providers.dart';
@@ -80,22 +81,24 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (state.isVerifying) ...[
-            const LinearProgressIndicator(),
-            const SizedBox(height: 16),
-          ],
-          if (state.linkError != null) ...[
-            AuthErrorBanner(
-              failure: state.linkError!,
-              onDismiss: ref.read(verifyEmailControllerProvider.notifier).clearLinkError,
+          AnimatedSlot(
+            visible: state.isVerifying,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: const [
+                LinearProgressIndicator(minHeight: 3),
+                SizedBox(height: AppSpacing.md),
+              ],
             ),
-            const SizedBox(height: 16),
-          ],
+          ),
+          AuthErrorBanner(
+            failure: state.linkError,
+            onDismiss: ref.read(verifyEmailControllerProvider.notifier).clearLinkError,
+          ),
           Card(
-            elevation: 0,
             color: Theme.of(context).colorScheme.surfaceContainerHighest,
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(AppSpacing.md),
               child: Row(
                 children: [
                   Icon(
@@ -114,9 +117,14 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
               ),
             ),
           ),
-          const SizedBox(height: 28),
+          const SizedBox(height: AppSpacing.lg),
           // AC-5 — disabled selama cooldown.
-          FilledButton.tonal(
+          PrimaryButton(
+            tonal: true,
+            busy: state.isResending,
+            label: isCoolingDown
+                ? 'Kirim ulang dalam ${remaining}s'
+                : 'Kirim ulang email',
             onPressed: (isCoolingDown || state.isResending)
                 ? null
                 : () => ref
@@ -125,19 +133,8 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
                     .then((_) {
                       if (mounted) setState(() {});
                     }),
-            child: state.isResending
-                ? const SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2.2),
-                  )
-                : Text(
-                    isCoolingDown
-                        ? 'Kirim ulang dalam ${remaining}s'
-                        : 'Kirim ulang email',
-                  ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpacing.md),
           if (isCoolingDown)
             Text(
               'Batas kirim ulang: 60 detik',

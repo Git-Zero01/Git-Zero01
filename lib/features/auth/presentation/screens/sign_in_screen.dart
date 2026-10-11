@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/router/app_router.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../providers/auth_controllers.dart';
 import '../widgets/auth_widgets.dart';
 
@@ -97,20 +98,20 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (state.failure != null) ...[
-            AuthErrorBanner(failure: state.failure!),
-            const SizedBox(height: 16),
-            // AC-4: link resend hanya untuk email belum terverifikasi.
-            if (state.canResendVerification)
-              Align(
-                alignment: Alignment.centerLeft,
-                child: TextButton.icon(
-                  onPressed: state.isSubmitting ? _resendVerification : null,
-                  icon: const Icon(Icons.outbox_outlined, size: 18),
-                  label: const Text('Kirim ulang email verifikasi'),
-                ),
+          // Banner menyusut sendiri saat error hilang (lihat AuthErrorBanner).
+          AuthErrorBanner(failure: state.failure),
+          // AC-4: link resend hanya untuk email belum terverifikasi.
+          AnimatedSlot(
+            visible: state.failure != null && state.canResendVerification,
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: state.isSubmitting ? _resendVerification : null,
+                icon: const Icon(Icons.outbox_outlined, size: 18),
+                label: const Text('Kirim ulang email verifikasi'),
               ),
-          ],
+            ),
+          ),
           EmailField(
             controller: _email,
             autofocus: true,
@@ -118,7 +119,15 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
             onChanged: controller.emailChanged,
             onSubmitted: (_) => controller.passwordTouched(),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
+          PasswordField(
+            controller: _password,
+            errorText: state.passwordError,
+            onChanged: controller.passwordChanged,
+            onSubmitted: (_) => _submit(),
+          ),
+          // "Lupa password?" menempel di bawah field password — sebelumnya
+          // nyangkut di antara email dan password sehingga membingungkan.
           Align(
             alignment: Alignment.centerRight,
             child: TextButton(
@@ -126,23 +135,11 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
               child: const Text('Lupa password?'),
             ),
           ),
-          const SizedBox(height: 8),
-          PasswordField(
-            controller: _password,
-            errorText: state.passwordError,
-            onChanged: controller.passwordChanged,
-            onSubmitted: (_) => _submit(),
-          ),
-          const SizedBox(height: 24),
-          FilledButton(
+          const SizedBox(height: AppSpacing.lg),
+          PrimaryButton(
+            label: 'Masuk',
+            busy: state.isSubmitting,
             onPressed: state.isSubmitEnabled ? _submit : null,
-            child: state.isSubmitting
-                ? const SizedBox(
-                    height: 22,
-                    width: 22,
-                    child: CircularProgressIndicator(strokeWidth: 2.4),
-                  )
-                : const Text('Masuk'),
           ),
         ],
       ),

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/router/app_router.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../domain/auth_validators.dart';
 import '../providers/auth_controllers.dart';
 import '../widgets/auth_widgets.dart';
@@ -82,10 +83,8 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (state.failure != null) ...[
-              AuthErrorBanner(failure: state.failure!),
-              const SizedBox(height: 16),
-            ],
+            // Banner menyusut sendiri saat error hilang (lihat AuthErrorBanner).
+            AuthErrorBanner(failure: state.failure),
             EmailField(
               controller: _email,
               autofocus: true,
@@ -93,7 +92,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
               onChanged: controller.emailChanged,
               onSubmitted: (_) => controller.passwordTouched(),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.md),
             PasswordField(
               controller: _password,
               label: 'Password',
@@ -103,12 +102,12 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
               onChanged: controller.passwordChanged,
               onSubmitted: (_) => controller.confirmPasswordTouched(),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.md),
             PasswordStrengthMeter(
               strength: state.strength,
               policy: PasswordPolicy.defaultPolicy,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.md),
             PasswordField(
               controller: _confirm,
               label: 'Konfirmasi password',
@@ -116,19 +115,14 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
               onChanged: controller.confirmPasswordChanged,
               onSubmitted: (_) => _submit(),
             ),
-            const SizedBox(height: 24),
-            FilledButton(
+            const SizedBox(height: AppSpacing.lg),
+            PrimaryButton(
               // Disabled sampai valid (requirement Sign Up Screen).
+              label: 'Daftar',
+              busy: state.isSubmitting,
               onPressed: state.isSubmitEnabled ? _submit : null,
-              child: state.isSubmitting
-                  ? const SizedBox(
-                      height: 22,
-                      width: 22,
-                      child: CircularProgressIndicator(strokeWidth: 2.4),
-                    )
-                  : const Text('Daftar'),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.md),
             Text(
               'Dengan mendaftar kamu setuju dengan Syarat & Kebijakan Privasi.',
               textAlign: TextAlign.center,

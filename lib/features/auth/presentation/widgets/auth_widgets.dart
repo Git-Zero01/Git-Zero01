@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -54,33 +56,48 @@ class AuthScaffold extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Text(
-                          title,
-                          style: Theme.of(context)
-                              .textTheme
-                              .headlineMedium
-                              ?.copyWith(fontWeight: FontWeight.w700),
-                        ),
-                        if (subtitle != null) ...[
-                          const SizedBox(height: 8),
-                          Text(
-                            subtitle!,
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyMedium
-                                ?.copyWith(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurfaceVariant,
-                                ),
+                        // Judul, subjudul, form, lalu footer muncul berurutan
+                        // (staggered) supaya perpindahan layar terasa hidup
+                        // tanpa tetap cepat.
+                        FadeSlideIn(
+                          child: Text(
+                            title,
+                            style: Theme.of(context).textTheme.headlineMedium,
                           ),
-                        ],
-                        const SizedBox(height: 28),
-                        child,
-                        if (footer != null) ...[
-                          const SizedBox(height: 24),
-                          footer!,
-                        ],
+                        ),
+                        if (subtitle != null)
+                          FadeSlideIn(
+                            delay: AppMotion.instant,
+                            child: Padding(
+                              padding:
+                                  const EdgeInsets.only(top: AppSpacing.sm),
+                              child: Text(
+                                subtitle!,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
+                                    ?.copyWith(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurfaceVariant,
+                                    ),
+                              ),
+                            ),
+                          ),
+                        const SizedBox(height: AppSpacing.lg),
+                        FadeSlideIn(
+                          delay: AppMotion.fast,
+                          child: child,
+                        ),
+                        if (footer != null)
+                          FadeSlideIn(
+                            delay: AppMotion.normal,
+                            child: Padding(
+                              padding:
+                                  const EdgeInsets.only(top: AppSpacing.lg),
+                              child: footer!,
+                            ),
+                          ),
                       ],
                     ),
                   ),
@@ -90,6 +107,111 @@ class AuthScaffold extends StatelessWidget {
           },
         ),
       ),
+    );
+  }
+}
+
+/// Entri halus: fade + bergeser naik sedikit, dengan jeda opsional.
+///
+/// Dipakai bertingkat (*staggered*) di [AuthScaffold] supaya isi layar masuk
+/// sesuai urutannya. Otomatis menghormati pengaturan "hapus animasi" di OS.
+class FadeSlideIn extends StatefulWidget {
+  const FadeSlideIn({
+    super.key,
+    required this.child,
+    this.delay = Duration.zero,
+    this.offset = 0.03,
+  });
+
+  final Widget child;
+
+  /// Jeda sebelum animasi mulai — dipakai untuk menyusun antrean.
+  final Duration delay;
+
+  /// Perpindahan vertikal sebagai pecahan dari tinggi anak (0.03 = 3%).
+  final double offset;
+
+  @override
+  State<FadeSlideIn> createState() => _FadeSlideInState();
+}
+
+class _FadeSlideInState extends State<FadeSlideIn>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _fade;
+  late final Animation<Offset> _slide;
+  Timer? _delayTimer;
+  bool _started = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(vsync: this, duration: AppMotion.slow);
+
+    final curved = CurvedAnimation(
+      parent: _controller,
+      curve: AppMotion.emphasized,
+    );
+    _fade = Tween<double>(begin: 0, end: 1).animate(curved);
+    _slide = Tween<Offset>(
+      begin: Offset(0, widget.offset),
+      end: Offset.zero,
+    ).animate(curved);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_started) return;
+    _started = true;
+
+    // MediaQuery baru boleh dibaca di sini, bukan di initState.
+    if (AppMotion.isReduced(context)) {
+      _controller.value = 1;
+    } else if (widget.delay == Duration.zero) {
+      _controller.forward();
+    } else {
+      _delayTimer = Timer(widget.delay, () {
+        if (mounted) _controller.forward();
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _delayTimer?.cancel();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _fade,
+      child: SlideTransition(position: _slide, child: widget.child),
+    );
+  }
+}
+
+/// Slot opsional: konten muncul atau hilang dengan animasi tinggi, bukan
+/// "lompatan" mendadak saat flag berubah.
+class AnimatedSlot extends StatelessWidget {
+  const AnimatedSlot({
+    super.key,
+    required this.visible,
+    required this.child,
+  });
+
+  final bool visible;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedSize(
+      duration: AppMotion.normal,
+      curve: AppMotion.standard,
+      alignment: Alignment.topCenter,
+      child: visible ? child : const SizedBox(width: double.infinity),
     );
   }
 }
@@ -277,7 +399,8 @@ class PasswordStrengthMeter extends StatelessWidget {
                 child: Padding(
                   padding: EdgeInsets.only(right: i == 3 ? 0 : 4),
                   child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 180),
+                    duration: AppMotion.fast,
+                    curve: AppMotion.standard,
                     height: 5,
                     decoration: BoxDecoration(
                       color: i < filled ? color : scheme.outlineVariant,
@@ -302,8 +425,41 @@ class PasswordStrengthMeter extends StatelessWidget {
 }
 
 /// Banner error untuk kegagalan dari server (AC-2, AC-4).
+///
+/// [failure] boleh null: banner lalu menyusut sendiri lewat [AnimatedSize]
+/// alih-alih hilang seketika, supaya layout tidak "melompat".
 class AuthErrorBanner extends StatelessWidget {
-  const AuthErrorBanner({super.key, required this.failure, this.onDismiss});
+  const AuthErrorBanner({
+    super.key,
+    this.failure,
+    this.onDismiss,
+    this.margin = const EdgeInsets.only(bottom: AppSpacing.md),
+  });
+
+  final AuthFailure? failure;
+  final VoidCallback? onDismiss;
+  final EdgeInsetsGeometry margin;
+
+  @override
+  Widget build(BuildContext context) {
+    final failure = this.failure;
+
+    return AnimatedSize(
+      duration: AppMotion.normal,
+      curve: AppMotion.standard,
+      alignment: Alignment.topCenter,
+      child: failure == null
+          ? const SizedBox(width: double.infinity)
+          : Padding(
+              padding: margin,
+              child: _BannerBody(failure: failure, onDismiss: onDismiss),
+            ),
+    );
+  }
+}
+
+class _BannerBody extends StatelessWidget {
+  const _BannerBody({required this.failure, this.onDismiss});
 
   final AuthFailure failure;
   final VoidCallback? onDismiss;
@@ -313,35 +469,122 @@ class AuthErrorBanner extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
 
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.fromLTRB(12, 10, 6, 10),
       decoration: BoxDecoration(
         color: scheme.errorContainer,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppRadius.field),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.error_outline, color: scheme.onErrorContainer, size: 20),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              failure.message,
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyMedium
-                  ?.copyWith(color: scheme.onErrorContainer),
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Icon(
+              Icons.error_outline,
+              color: scheme.onErrorContainer,
+              size: 20,
             ),
           ),
-          if (onDismiss != null)
-            GestureDetector(
-              onTap: onDismiss,
-              behavior: HitTestBehavior.opaque,
-              child: Padding(
-                padding: const EdgeInsets.only(left: 4),
-                child: Icon(Icons.close, size: 18, color: scheme.onErrorContainer),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text(
+                failure.message,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: scheme.onErrorContainer,
+                    ),
               ),
             ),
+          ),
+          // Tombol sungguhan, bukan GestureDetector: punya area sentuh 40dp,
+          // tooltip, dan terbaca screen reader.
+          if (onDismiss != null)
+            IconButton(
+              onPressed: onDismiss,
+              icon: const Icon(Icons.close_rounded, size: 18),
+              tooltip: 'Tutup pesan',
+              color: scheme.onErrorContainer,
+              visualDensity: VisualDensity.compact,
+              padding: EdgeInsets.zero,
+              constraints:
+                  const BoxConstraints(minWidth: 40, minHeight: 40),
+            ),
         ],
+      ),
+    );
+  }
+}
+
+/// Tombol aksi utama dengan umpan balik tekan yang halus dan status loading
+/// yang seragam di seluruh alur auth.
+class PrimaryButton extends StatefulWidget {
+  const PrimaryButton({
+    super.key,
+    required this.label,
+    required this.onPressed,
+    this.busy = false,
+    this.tonal = false,
+  });
+
+  final String label;
+
+  /// Null berarti tombol nonaktif — dipakai controller saat form tak valid.
+  final VoidCallback? onPressed;
+  final bool busy;
+  final bool tonal;
+
+  @override
+  State<PrimaryButton> createState() => _PrimaryButtonState();
+}
+
+class _PrimaryButtonState extends State<PrimaryButton> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    // Nonaktif saat form tak valid ATAU sedang submit.
+    final enabled = widget.onPressed != null && !widget.busy;
+
+    final label = AnimatedSwitcher(
+      duration: AppMotion.fast,
+      child: widget.busy
+          ? SizedBox(
+              key: const ValueKey('busy'),
+              height: 22,
+              width: 22,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.4,
+                color: Theme.of(context).colorScheme.onPrimary,
+              ),
+            )
+          : Text(
+              widget.label,
+              key: const ValueKey('label'),
+            ),
+    );
+
+    final button = widget.tonal
+        ? FilledButton.tonal(
+            onPressed: enabled ? widget.onPressed : null,
+            child: label,
+          )
+        : FilledButton(
+            onPressed: enabled ? widget.onPressed : null,
+            child: label,
+          );
+
+    return AnimatedScale(
+      // Menekan sedikit memberi rasa "hidup" tanpa mengaburkan teks.
+      scale: _pressed && enabled ? 0.98 : 1,
+      duration: AppMotion.instant,
+      curve: AppMotion.standard,
+      child: Listener(
+        onPointerDown: enabled ? (_) => setState(() => _pressed = true) : null,
+        onPointerUp: enabled ? (_) => setState(() => _pressed = false) : null,
+        onPointerCancel:
+            enabled ? (_) => setState(() => _pressed = false) : null,
+        child: button,
       ),
     );
   }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/router/app_router.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../providers/auth_controllers.dart';
 import '../widgets/auth_widgets.dart';
 
@@ -79,10 +80,8 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (state.failure != null) ...[
-            AuthErrorBanner(failure: state.failure!),
-            const SizedBox(height: 16),
-          ],
+          // Banner menyusut sendiri saat error hilang (lihat AuthErrorBanner).
+          AuthErrorBanner(failure: state.failure),
           EmailField(
             controller: _email,
             autofocus: true,
@@ -91,16 +90,11 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
             onSubmitted: (_) => _submit(),
             textInputAction: TextInputAction.done,
           ),
-          const SizedBox(height: 24),
-          FilledButton(
+          const SizedBox(height: AppSpacing.lg),
+          PrimaryButton(
+            label: 'Kirim link reset',
+            busy: state.isSubmitting,
             onPressed: state.isSubmitEnabled ? _submit : null,
-            child: state.isSubmitting
-                ? const SizedBox(
-                    height: 22,
-                    width: 22,
-                    child: CircularProgressIndicator(strokeWidth: 2.4),
-                  )
-                : const Text('Kirim link reset'),
           ),
         ],
       ),
