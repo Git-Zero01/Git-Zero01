@@ -10,6 +10,13 @@
 class Env {
   const Env._();
 
+  /// Mode demo: UI berjalan dengan repository in-memory, tanpa Supabase.
+  ///
+  /// Hanya untuk preview tampilan — BUKAN autentikasi sungguhan.
+  /// Jangan pernah diaktifkan di build rilis.
+  static const bool demoMode =
+      bool.fromEnvironment('DEMO_MODE', defaultValue: false);
+
   static const String supabaseUrl =
       String.fromEnvironment('SUPABASE_URL', defaultValue: '');
 

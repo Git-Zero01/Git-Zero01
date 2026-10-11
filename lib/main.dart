@@ -7,11 +7,26 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app.dart';
 import 'core/config/env.dart';
+import 'core/demo/demo_auth.dart';
 import 'core/storage/secure_local_storage.dart';
 import 'features/auth/presentation/providers/auth_providers.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Mode demo: tanpa Supabase, memakai data in-memory.
+  if (Env.demoMode) {
+    runApp(
+      ProviderScope(
+        overrides: [
+          authRepositoryProvider.overrideWithValue(DemoAuthRepository()),
+          secureStorageProvider.overrideWithValue(DemoSecureStorage()),
+        ],
+        child: const NutriAuthApp(),
+      ),
+    );
+    return;
+  }
 
   if (!Env.isConfigured) {
     runApp(const _MissingConfigApp());
